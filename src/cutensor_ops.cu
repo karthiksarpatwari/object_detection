@@ -1,6 +1,34 @@
 #include "../include/cutensor_ops.h"
 #include "../include/error_helpers.h"
+#include <cuda_runtime.h>
 #include <stdio.h>
+
+// CUDA kernels for 4D tensor transpose (replaces deprecated cuTENSOR 1.x API)
+__global__ void transposeNCHWtoNHWCKernel(const float* __restrict__ input, float* __restrict__ output,
+                                          int N, int C, int H, int W) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total = N * C * H * W;
+    if (idx >= total) return;
+    int n = idx / (C * H * W);
+    int c = (idx / (H * W)) % C;
+    int h = (idx / W) % H;
+    int w = idx % W;
+    int outIdx = ((n * H + h) * W + w) * C + c;
+    output[outIdx] = input[idx];
+}
+
+__global__ void transposeNHWCtoNCHWKernel(const float* __restrict__ input, float* __restrict__ output,
+                                          int N, int C, int H, int W) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int total = N * H * W * C;
+    if (idx >= total) return;
+    int n = idx / (H * W * C);
+    int h = (idx / (W * C)) % H;
+    int w = (idx / C) % W;
+    int c = idx % C;
+    int outIdx = ((n * C + c) * H + h) * W + w;
+    output[outIdx] = input[idx];
+}
 
 CutensorOps::CutensorOps() {
     cutensorStatus_t status = cutensorCreate(&handle);
@@ -11,85 +39,43 @@ CutensorOps::CutensorOps() {
 CutensorOps::~CutensorOps() {
     cutensorStatus_t status = cutensorDestroy(handle);
     checkCutensorError(status, "Cutensor handle destruction failed");
-    printf("Cutensor handle destroyed successfully\n");}
-
-
+    printf("Cutensor handle destroyed successfully\n");
+}
 
 void CutensorOps::transposeTensor4D_NCHW_to_NHWC(float* input, float* output, int N, int C, int H, int W) {
-    cutensorTensorDescriptor_t descInput, descOutput;
-    cutensorStatus_t status;
-
-    int64_t extentInput[4] = {N, C, H, W};
-    int64_t strideInput[4] = {C*H*W, H*W, W, 1};
-
-    status = cutensorInitTensorDescriptor(handle, &descInput, 4, extentInput, strideInput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-
-    int64_t extentOutput[4] = {N, H, W, C};
-    int64_t strideOutput[4] = {H*W*C, W*C, C, 1};
-
-    status = cutensorInitTensorDescriptor(handle, &descOutput, 4, extentOutput, strideOutput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-
-    int32_t mode[4] = {0, 2, 3, 1};  // NCHW -> NHWC
-    float alpha = 1.0f;
-
-    status = cutensorPermutation(handle, &alpha, input, &descInput, mode, output, &descOutput, CUTENSOR_R_32F, 0);
-    checkCutensorError(status, "Cutensor permutation failed");
+    int total = N * C * H * W;
+    int blockSize = 256;
+    int numBlocks = (total + blockSize - 1) / blockSize;
+    transposeNCHWtoNHWCKernel<<<numBlocks, blockSize>>>(input, output, N, C, H, W);
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "transposeNCHWtoNHWC kernel failed: %s\n", cudaGetErrorString(err));
+    }
 }
+
 void CutensorOps::transposeTensor4D_NHWC_to_NCHW(float* input, float* output, int N, int C, int H, int W) {
-    cutensorTensorDescriptor_t descInput, descOutput;
-    cutensorStatus_t status;
-
-    int64_t extentInput[4] = {N, H, W, C};
-    int64_t strideInput[4] = {H*W*C, W*C, C, 1};
-
-    status = cutensorInitTensorDescriptor(handle, &descInput, 4, extentInput, strideInput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-
-    int64_t extentOutput[4] = {N, C, H, W};
-    int64_t strideOutput[4] = {C*H*W, H*W, W, 1};
-
-    status = cutensorInitTensorDescriptor(handle, &descOutput, 4, extentOutput, strideOutput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-
-    int32_t mode[4] = {0, 3, 1, 2};  // NHWC -> NCHW
-    float alpha = 1.0f;
-
-    status = cutensorPermutation(handle, &alpha, input, &descInput, mode, output, &descOutput, CUTENSOR_R_32F, 0);
-    checkCutensorError(status, "Cutensor permutation failed");
+    int total = N * H * W * C;
+    int blockSize = 256;
+    int numBlocks = (total + blockSize - 1) / blockSize;
+    transposeNHWCtoNCHWKernel<<<numBlocks, blockSize>>>(input, output, N, C, H, W);
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess) {
+        fprintf(stderr, "transposeNHWCtoNCHW kernel failed: %s\n", cudaGetErrorString(err));
+    }
 }
 
 void CutensorOps::permuteTensor(float* input, float* output, int numDims, int64_t* extent, int* permutation) {
-    cutensorTensorDescriptor_t descInput, descOutput;
-    cutensorStatus_t status;
-
-    int64_t strideInput[8], strideOutput[8];
-    strideInput[numDims - 1] = 1;
-    for (int i = numDims - 2; i >= 0; i--)
-        strideInput[i] = strideInput[i + 1] * extent[i + 1];
-
-    int64_t extentPerm[8];
-    for (int i = 0; i < numDims; i++)
-        extentPerm[i] = extent[permutation[i]];
-    strideOutput[numDims - 1] = 1;
-    for (int i = numDims - 2; i >= 0; i--)
-        strideOutput[i] = strideOutput[i + 1] * extentPerm[i + 1];
-
-    status = cutensorInitTensorDescriptor(handle, &descInput, numDims, extent, strideInput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-    status = cutensorInitTensorDescriptor(handle, &descOutput, numDims, extentPerm, strideOutput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-
-    int32_t mode[8];
-    for (int i = 0; i < numDims; i++) mode[i] = permutation[i];
-    float alpha = 1.0f;
-    status = cutensorPermutation(handle, &alpha, input, &descInput, mode, output, &descOutput, CUTENSOR_R_32F, 0);
-    checkCutensorError(status, "Cutensor permutation failed");
+    if (numDims == 4 && permutation[0] == 0 && permutation[1] == 2 && permutation[2] == 3 && permutation[3] == 1) {
+        transposeTensor4D_NCHW_to_NHWC(input, output, extent[0], extent[1], extent[2], extent[3]);
+    } else if (numDims == 4 && permutation[0] == 0 && permutation[1] == 3 && permutation[2] == 1 && permutation[3] == 2) {
+        transposeTensor4D_NHWC_to_NCHW(input, output, extent[0], extent[1], extent[2], extent[3]);
+    } else {
+        fprintf(stderr, "permuteTensor: only NCHW<->NHWC (4D) supported for arbitrary permutation\n");
+    }
 }
 
-__host__ void demonstrateCutensorTranspose(cutensorHandle_t handle) {
-    printf("Demonstrating Cutensor Transpose\n");
+__host__ void demonstrateCutensorTranspose(cutensorHandle_t /*handle*/) {
+    printf("Demonstrating 4D Tensor Transpose (NCHW -> NHWC)\n");
     int N = 2, C = 3, H = 4, W = 5;
     int size = N*C*H*W;
 
@@ -111,26 +97,9 @@ __host__ void demonstrateCutensorTranspose(cutensorHandle_t handle) {
     cudaMalloc((void**)&d_input, size*sizeof(float));
     cudaMalloc((void**)&d_output, size*sizeof(float));
     cudaMemcpy(d_input, h_input, size*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_output, h_output, size*sizeof(float), cudaMemcpyHostToDevice);
 
-    cutensorTensorDescriptor_t descInput, descOutput;
-    cutensorStatus_t status;
-    int64_t extentInput[4] = {N, C, H, W};
-    int64_t strideInput[4] = {C*H*W, H*W, W, 1};
-    int64_t extentOutput[4] = {N, H, W, C};
-    int64_t strideOutput[4] = {H*W*C, W*C, C, 1};
-
-    status = cutensorInitTensorDescriptor(handle, &descInput, 4, extentInput, strideInput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-
-    status = cutensorInitTensorDescriptor(handle, &descOutput, 4, extentOutput, strideOutput, CUTENSOR_R_32F, CUTENSOR_OP_IDENTITY);
-    checkCutensorError(status, "Cutensor init tensor descriptor failed");
-
-    float alpha = 1.0f;
-    int32_t mode[4] = {0, 2, 3, 1};
-    status = cutensorPermutation(handle, &alpha, d_input, &descInput, mode, d_output, &descOutput, CUTENSOR_R_32F, 0);
-    checkCutensorError(status, "Cutensor permutation failed");
-    printf("Cutensor permutation completed successfully\n");
+    CutensorOps ops;
+    ops.transposeTensor4D_NCHW_to_NHWC(d_input, d_output, N, C, H, W);
 
     cudaMemcpy(h_output, d_output, size*sizeof(float), cudaMemcpyDeviceToHost);
     printf("Result: \n");

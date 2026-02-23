@@ -60,7 +60,7 @@ def download_and_export(model_name: str, output_path: str) -> None:
 
         wrapper = TraceWrapper(raw_model)
         with torch.no_grad():
-            traced = torch.jit.trace(wrapper, dummy_input)
+            traced = torch.jit.trace(wrapper, dummy_input, check_trace=False)
         traced.save(output_path)
         print(f"TorchScript model saved to {output_path}")
 

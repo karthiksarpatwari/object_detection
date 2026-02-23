@@ -63,7 +63,9 @@ __host__ void preprocessImage(Image* image, float* d_output, int targetW, int ta
    if(!image->deviceAllocated) {
     copyImageToDevice(image);
    }
-   
+   /* Kernel reads from device memory; copyImageToDevice stores in d_data */
+   unsigned char* d_src = image->d_data;
+
    float *d_mean;
    float *d_std;
 
@@ -76,7 +78,7 @@ __host__ void preprocessImage(Image* image, float* d_output, int targetW, int ta
    dim3 blockSize(16,16);
    dim3 gridSize((targetW + 15)/16, (targetH + 15)/16);
 
-   letterboxResizeKernel<<<gridSize, blockSize>>>(image->data, d_output, image->width, image->height, targetW, targetH, image->channels, params.padValue, scale, offsetX, offsetY);
+   letterboxResizeKernel<<<gridSize, blockSize>>>(d_src, d_output, image->width, image->height, targetW, targetH, image->channels, params.padValue, scale, offsetX, offsetY);
    checkCudaError(cudaGetLastError(),"Letterbox Kernel failed");
 
    normalizeKernel<<<gridSize, blockSize>>>(d_output, targetW, targetH, image->channels, d_mean, d_std);

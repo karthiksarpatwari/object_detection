@@ -25,7 +25,9 @@ LDFLAGS = -L"$(CUDA_PATH)/lib64" \
 	-L"$(LIBTORCH_PATH)/lib" \
 	-Xlinker=-rpath -Xlinker=$(LIBTORCH_PATH)/lib
 
-LIBS = -lcudart -lcublas -lcutensor -lcudnn -ltorch -ltorch_cuda -lc10 -lc10_cuda
+# LibTorch: use --no-as-needed so linker keeps libs with indirectly-used symbols; order matters
+TORCH_LIBS = -Xlinker=--no-as-needed -ltorch -ltorch_cuda -ltorch_cpu -lc10_cuda -lc10 -Xlinker=--as-needed
+LIBS = -lcudart -lcublas -lcutensor -lcudnn $(TORCH_LIBS) -lpthread
 
 # Target: no .exe on Linux/Colab
 TARGET = $(if $(filter Linux Darwin,$(UNAME_S)),object_detector,object_detector.exe)

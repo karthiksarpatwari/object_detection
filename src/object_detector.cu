@@ -9,8 +9,8 @@
 ObjectDetector::ObjectDetector(const char* modelPath, const char* labelsPath) {
 
     engine = new InferenceEngine(modelPath);
-    inputWidth = engine->inputWidth();
-    inputHeight = engine->inputHeight();
+    inputWidth = engine->getInputWidth();
+    inputHeight = engine->getInputHeight();
     cublasOps = new CublasOps();
     cutensorOps = new CutensorOps();
 
@@ -25,7 +25,7 @@ ObjectDetector::~ObjectDetector() {
     delete engine;
     delete cublasOps;
     delete cutensorOps;
-    if(classNamePtrs != NULL){ delete[] classNamePtrs; }
+    if(classNamesPtrs != NULL){ delete[] classNamesPtrs; }
     printf("ObjectDetector destroyed successfully\n");
 
 
@@ -35,7 +35,7 @@ void ObjectDetector::loadClassNames(const char* labelsPath) {
     std::ifstream file(labelsPath);
     if(!file.is_open()) {
         fprintf(stderr, "Error: Failed to open class names file: %s\n", labelsPath);
-        classNamePtrs = NULL;
+        classNamesPtrs = NULL;
         return;
     }
 
@@ -46,12 +46,11 @@ void ObjectDetector::loadClassNames(const char* labelsPath) {
     }
     file.close();
 
-    classNamePtrs = new const char*[classNames.size()];
+    classNamesPtrs = new const char*[classNames.size()];
     for(size_t i = 0; i < classNames.size(); i++) {
-        classNamePtrs[i] = classNames[i].c_str();
+        classNamesPtrs[i] = classNames[i].c_str();
     }
-    numClasses = classNames.size();
-    printf("Loaded %d class names successfully\n", numClasses);
+    printf("Loaded %zu class names successfully\n", classNames.size());
 }
 std::vector<Detection> ObjectDetector::detect(Image* image, float confThresh, float iouThresh) {
 
@@ -67,25 +66,31 @@ std::vector<Detection> ObjectDetector::detect(Image* image, float confThresh, fl
 
    float* d_preprocessed;
    cudaMalloc(&d_preprocessed, inputWidth * inputHeight * 3 * sizeof(float));
-   int numPredictions = engine -> getNumPredictions();
-   int predictionSize = engine -> getPredictionSize();
+   int numPredictions = engine->getNumPredictions();
+   int predictionSize = engine->getPredictionSize();
    float* d_predictions;
    cudaMalloc(&d_predictions, numPredictions * predictionSize * sizeof(float));
    float* d_output;
    cudaMalloc(&d_output, numPredictions * sizeof(Detection));
-   
+
+   cudaEventRecord(start);
+   preprocess(image, d_preprocessed);
+   cudaEventRecord(stop);
+   cudaEventSynchronize(stop);
+   cudaEventElapsedTime(&lastTiming.preprocessing, start, stop);
+
    cudaEventRecord(start);
    inference(d_preprocessed, d_predictions);
    cudaEventRecord(stop);
    cudaEventSynchronize(stop);
-   cudaEventElapsedTime(&lastTiming.inferenceTime, start, stop);
+   cudaEventElapsedTime(&lastTiming.inference, start, stop);
 
    std::vector<Detection> filteredDetections;
    cudaEventRecord(start);
    postprocess(d_predictions, filteredDetections, confThresh, image->width, image->height);
    cudaEventRecord(stop);
    cudaEventSynchronize(stop);
-   cudaEventElapsedTime(&lastTiming.postprocessingTime, start, stop);
+   cudaEventElapsedTime(&lastTiming.postprocessing, start, stop);
 
    std::vector<Detection> nmsDetections;
    cudaEventRecord(start);
@@ -94,28 +99,30 @@ std::vector<Detection> ObjectDetector::detect(Image* image, float confThresh, fl
    cudaEventSynchronize(stop);
    cudaEventElapsedTime(&lastTiming.nms, start, stop);
    
-   for(size_t i=0; i<finalDetections.size(); i++) {
-    int classId = finalDetections[i].class_id;
+   for(size_t i=0; i<nmsDetections.size(); i++) {
+    int classId = nmsDetections[i].class_id;
     if (classId >=0 && classId < (int)classNames.size()) {
-        strncpy(finalDetections[i].class_name, classNames[classId].c_str(),63);
-        finalDetections[i]/class_name[63] = '\0';
+        strncpy(nmsDetections[i].class_name, classNames[classId].c_str(),63);
+        nmsDetections[i].class_name[63] = '\0';
     } else {
-        sprintf(finalDetections[i].class_name,64,"class_%d",classId);
+        sprintf(nmsDetections[i].class_name, "class_%d", classId);
     }
 }
 
 cudaEventRecord(start);
-drawBouningBoxes(image,finalDetections,classNamePtrs);
+drawBoundingBoxes(image, nmsDetections, classNamesPtrs);
 cudaEventRecord(stop);
 cudaEventSynchronize(stop);
 cudaEventElapsedTime(&lastTiming.visualization, start, stop);
+
+lastTiming.total = lastTiming.preprocessing + lastTiming.inference + lastTiming.postprocessing + lastTiming.nms + lastTiming.visualization;
 
 cudaFree(d_preprocessed);
 cudaFree(d_predictions);
 cudaFree(d_output);
 cudaEventDestroy(start);
 cudaEventDestroy(stop);
-return finalDetections;
+return nmsDetections;
 }
 
 void ObjectDetector::preprocess(Image* image, float* d_input) {
@@ -127,5 +134,5 @@ void ObjectDetector::inference(float* d_input, float* d_output) {
 }
 
 void ObjectDetector::postprocess(float* d_output, std::vector<Detection>& detections, float confThresh, int imgWidth, int imgHeight) {
-    decodeAndFilterPredictions(d_output,detections,confThresh,imgWidth,imgHeight,engine -> getNumPredictions(),engine -> getPredictionSize());
+    decodeAndFilterPredictions(d_output,detections,confThresh,imgWidth,imgHeight,engine->getNumPredictions(),engine->getPredictionSize());
 }

@@ -43,7 +43,7 @@ class ObjectDetector {
         void postprocess(float* d_output, std::vector<Detection>& detections, float confThresh, int imgWidth, int imgHeight);
     
     private:
-        InferenceEngine engine;
+        InferenceEngine* engine;
         CublasOps* cublasOps;
         CutensorOps* cutensorOps;
         std::vector<std::string> classNames;

@@ -9,6 +9,7 @@
 class InferenceEngine {
     public:
         InferenceEngine();
+        InferenceEngine(const char* modelPath);
         ~InferenceEngine();
 
         void forward(float* d_input, float* d_output);

@@ -2,7 +2,7 @@
 #include "../include/error_helpers.h"
 #include <stdio.h>
 
-InferenceEngine:: InferenceEngine(const char* modelPath) : device(torch:kCUDA,0) {
+InferenceEngine::InferenceEngine(const char* modelPath) : device(torch::kCUDA, 0) {
     printf("InferenceEngine constructor called\n");
 
     try {
@@ -15,21 +15,14 @@ InferenceEngine:: InferenceEngine(const char* modelPath) : device(torch:kCUDA,0)
         inputShape = {1,3,640,640};
         outputShape = {1,25200,85};
 
-        printf("Input shape: %s\n", inputShape.str().c_str());
-        printf("Output shape: %s\n", outputShape.str().c_str());
+        printf("Input shape: [%ld, %ld, %ld, %ld]\n", inputShape[0], inputShape[1], inputShape[2], inputShape[3]);
+        printf("Output shape: [%ld, %ld, %ld]\n", outputShape[0], outputShape[1], outputShape[2]);
 
-        printf("Do a warmup run to warm up the model\n");
-        torch::Tensor dummyInput = torch::randn({1,3,640,640},device);
+        printf("Doing warmup run...\n");
+        torch::Tensor dummyInput = torch::randn({1, 3, 640, 640}, device);
         torch::NoGradGuard no_grad;
         auto output = model.forward({dummyInput}).toTensor();
         printf("Warmup run completed successfully\n");
-
-        printf("Creating input tensor\n");
-        inputTensor = torch::randn({1,3,640,640},device);
-        printf("Input tensor created successfully\n");
-
-        printf("Creating output tensor\n");
-        outputTensor = torch::randn({1,25200,85},device);
     }
     catch (const c10::Error& e) {
         fprintf(stderr, "Error loading model: %s\n", e.what());
@@ -56,7 +49,7 @@ void InferenceEngine::forward(float* d_input, float* d_output) {
         torch::Tensor output = model.forward(inputs).toTensor();
 
         if (output.size(0) != outputShape[0] || output.size(1) != outputShape[1] || output.size(2) != outputShape[2]) {
-            fprintf(stderr, "Output shape mismatch: %s\n", output.sizes().str().c_str());
+            fprintf(stderr, "Output shape mismatch: [%ld, %ld, %ld]\n", output.size(0), output.size(1), output.size(2));
          //   exit(EXIT_FAILURE);
         }
         cudaError_t err = cudaMemcpy(d_output, output.data_ptr(), output.numel() * sizeof(float), cudaMemcpyDeviceToHost);

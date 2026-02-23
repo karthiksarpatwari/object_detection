@@ -27,6 +27,9 @@ class InferenceEngine {
         std::vector<int64_t> inputShape;
         std::vector<int64_t> outputShape;
         torch::Device device;
+        bool useCpu_;  // true when CUDA model.to() failed and we fell back to CPU
+        float* h_inputBuffer_;   // host buffer for CPU inference (when useCpu_)
+        float* h_outputBuffer_;  // host buffer for CPU inference output
 };
 
 #endif

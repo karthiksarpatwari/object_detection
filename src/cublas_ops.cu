@@ -14,7 +14,7 @@ CublasOps::~CublasOps() {
     printf("Cublas handle destroyed successfully\n");
 }
 
-void CublasOps::matrixMultiply(float* A, float* B, float* C, int M, int N, int K) {
+void CublasOps::matrixMultiply(float* A, float* B, float* C, int M, int N, int K, float alpha, float beta) {
     //  Matrix A (MxK), Matrix B (KxN), Matrix C (MxN)
     cublasStatus_t status = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, M, N, K, &alpha, A, M, B, N, &beta, C, M);
     checkCublasError(status, "Cublas matrix multiplication failed");

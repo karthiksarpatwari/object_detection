@@ -34,10 +34,10 @@ TARGET = $(if $(filter Linux Darwin,$(UNAME_S)),object_detector,object_detector.
 PYTHON ?= $(if $(filter Linux Darwin,$(UNAME_S)),python3,python)
 
 SOURCES = src/main.cu \
+	src/image_loader.cu \
 	src/object_detector.cu \
 	src/nms_kernel.cu \
 	src/cutensor_ops.cu \
-	src/error_helpers.cu \
 	src/postprocessing_kernel.cu \
 	src/preprocessing_kernel.cu \
 	src/cublas_ops.cu \

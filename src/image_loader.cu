@@ -27,7 +27,7 @@ __host__ Image* loadImage(const char* filename) {
 
 }
 
-__host__ saveImage(const char* filename, Image* img) {
+__host__ void saveImage(const char* filename, Image* img) {
     if(img == NULL || img->data == NULL) {
         fprintf(stderr, "Error: Failed to save image: %s\n", filename);
         return;

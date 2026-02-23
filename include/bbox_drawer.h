@@ -8,11 +8,11 @@
 
 struct Color {
     unsigned char r, g, b;
-}
+};
 
-__ global__ void drawRectangleKernel(unsigned char* image, int width, int height, int x1, int y1, int x2, int y2, int channels, unsigned char r, unsigned char g, unsigned char b, int thickness);
+__global__ void drawRectangleKernel(unsigned char* image, int width, int height, int x1, int y1, int x2, int y2, int channels, unsigned char r, unsigned char g, unsigned char b, int thickness);
 
-__global__ void drawTextBackgroundKernel(unsigned char* image, int width, int height, int x, int y, int width, int height, int channels, unsigned char r, unsigned char g, unsigned char b);
+__global__ void drawTextBackgroundKernel(unsigned char* image, int width, int height, int x, int y, int textWidth, int textHeight, int channels, unsigned char r, unsigned char g, unsigned char b);
 
 //Host functions
 

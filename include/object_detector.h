@@ -20,6 +20,7 @@
 class ObjectDetector {
     public:
         ObjectDetector();
+        ObjectDetector(const char* modelPath, const char* labelsPath);
         ~ObjectDetector();
         
         // Main detection function - returns the detections for the given image
@@ -34,6 +35,8 @@ class ObjectDetector {
             float total;
             float nms;
         };
+
+        const Timing& getLastTiming() const { return lastTiming; }
 
         void preprocess(Image* image, float* d_input);
         void inference(float* d_input, float* d_output);

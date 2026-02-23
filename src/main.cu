@@ -1,6 +1,9 @@
 #include "../include/object_detector.h"
+#include "../include/image_loader.h"
 #include "../include/error_helpers.h"
 #include <stdio.h>
+#include <string>
+#include <tuple>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
@@ -81,7 +84,8 @@ int main(int argc, char* argv[]) {
     printf("Loading model and initializing YOLOv8 detector...\n");
     ObjectDetector detector("models/yolov5n.pt", "data/coco.names");
 
-    printf("Loading images from: %s\n". inputDir.c_str());
+    printf("Loading images from: %s\n", inputDir.c_str());
+    std::vector<Image*> images = loadImagesFromDirectory(inputDir.c_str());
 
     if(images.empty()) {
         fprintf(stderr, "Error: No images found in input directory: %s\n", inputDir.c_str());
@@ -99,6 +103,8 @@ int main(int argc, char* argv[]) {
 
     int totalImages = images.size();
     int processedImages = 0;
+    int totalDetections = 0;
+    ObjectDetector::Timing lastTiming = {0};
 
     for (size_t i = 0; i < images.size(); ++i) {
         Image* img = images[i];
@@ -106,7 +112,8 @@ int main(int argc, char* argv[]) {
         std::vector<Detection> detections = detector.detect(img, confThresh, iouThresh);
 
         totalDetections += detections.size();
-        ObjectDetector::Timing timing = detector.getLastTiming();
+        lastTiming = detector.getLastTiming();
+        ObjectDetector::Timing timing = lastTiming;
 
         printf("\n[%zu/%zu] %s\n", i + 1, images.size(), img->filename);
         printf("Detections: %zu\n", detections.size());
@@ -150,10 +157,12 @@ int main(int argc, char* argv[]) {
     printf("Average time per image: %.2f ms\n", globalTime/totalImages);
     printf(" Throughput: %.1f images/s\n", totalImages/globalTime*1000);
     printf(" Average breakdown:\n");
-    printf(" Preprocessing: %.2f ms\n",totalTime/images.size())*(lastTiming.preprocessing/lastTiming.total));
-    printf(" Inference: %.2f ms\n",totalTime/images.size())*(lastTiming.inference/lastTiming.total));
-    printf(" Postprocessing: %.2f ms\n",totalTime/images.size())*(lastTiming.postprocessing/lastTiming.total));
-    printf(" NMS: %.2f ms\n",totalTime/images.size())*(lastTiming.nms/lastTiming.total));
+    if (lastTiming.total > 0 && !images.empty()) {
+        printf("  Preprocessing: %.2f ms\n", (globalTime/images.size())*(lastTiming.preprocessing/lastTiming.total));
+        printf("  Inference: %.2f ms\n", (globalTime/images.size())*(lastTiming.inference/lastTiming.total));
+        printf("  Postprocessing: %.2f ms\n", (globalTime/images.size())*(lastTiming.postprocessing/lastTiming.total));
+        printf("  NMS: %.2f ms\n", (globalTime/images.size())*(lastTiming.nms/lastTiming.total));
+    }
     printf("|----------------------------------------|\n");
 
     cudaEventDestroy(globalStop);

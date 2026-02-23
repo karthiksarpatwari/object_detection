@@ -14,10 +14,11 @@ typedef struct {
     int height;
     int channels;
     bool deviceAllocated;
+    char filename[512];
 } Image;
 
 __host__ Image* loadImage(const char* filename);
-__host__ void saveImage(Image* img, const char* filename);
+__host__ void saveImage(const char* filename, Image* img);
 __host__ void freeImage(Image* img);
 __host__ std::vector<Image*> loadImagesFromDirectory(const char* directory);
 __host__ void allocateDeviceImage(Image* img);

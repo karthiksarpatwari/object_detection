@@ -56,14 +56,14 @@ __global__ void drawRectangleKernel(unsigned char* image, int width, int height,
     }
 }
 
-__global__ void drawTextBackgroundKernel(unsigned char* image, int width, int height, int x, int y, int textWidth, int textHeight, unsigned char r, unsigned char g, unsigned char b) {
+__global__ void drawTextBackgroundKernel(unsigned char* image, int width, int height, int x, int y, int textWidth, int textHeight, int channels, unsigned char r, unsigned char g, unsigned char b) {
 
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     if (px >= width || py >= height) return;
 
     if (px >= x && px < x + textWidth && py >= y && py < y + textHeight) {
-        int idx = (py * width + px) * 3;
+        int idx = (py * width + px) * channels;
         image[idx] = r;
         if (channels > 1) { image[idx+1] = g;}
         if (channels > 2) { image[idx+2] = b;}
@@ -108,7 +108,7 @@ __host__ void drawBoundingBoxes(Image* image, std::vector<Detection>& detections
         int labelHeight = 20;
         int labelWidth = 100;
 
-        drawTextBackgroundKernel<<<gridSize, blockSize>>>(image -> d_data, image -> width, image -> height, x1, y1-labelHeight, labelWidth, labelHeight, color.r, color.g, color.b);
+        drawTextBackgroundKernel<<<gridSize, blockSize>>>(image -> d_data, image -> width, image -> height, x1, y1-labelHeight, labelWidth, labelHeight, image -> channels, color.r, color.g, color.b);
         checkCudaErrors(cudaGetLastError(),"Draw Text Background Kernel failed");
 
  

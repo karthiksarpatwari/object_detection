@@ -3,7 +3,7 @@
 #include "../include/error_helpers.h"
 #include <stdio.h>
 
-static const Color CLASS_COLORS[85] = {
+static const Color CLASS_COLORS[] = {
     {230, 25, 75},   {60, 180, 75},   {255, 225, 25},  {0, 130, 200},   {245, 130, 48},
     {145, 30, 180},  {70, 240, 240},  {240, 50, 230},  {210, 245, 60},  {250, 190, 212},
     {0, 128, 128},   {220, 190, 255}, {170, 110, 40},  {255, 250, 200}, {128, 0, 0},
@@ -25,27 +25,19 @@ static const Color CLASS_COLORS[85] = {
 
 __global__ void drawRectangleKernel(unsigned char* image, int width, int height, int x1, int y1, int x2, int y2, int channels, unsigned char r, unsigned char g, unsigned char b, int thickness) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
-    int y = blockIdx.y *blockDim.y + threadIdx.y;
+    int y = blockIdx.y * blockDim.y + threadIdx.y;
     if (x >= width || y >= height) return;
 
+    int left = max(0, min(x1, width - 1));
+    int top = max(0, min(y1, height - 1));
+    int right = max(0, min(x2, width - 1));
+    int bottom = max(0, min(y2, height - 1));
+
     bool onBorder = false;
-
-    x1 = max(0, min(x1, width - 1));
-    y1 = max(0, min(y1, height - 1));
-    x2 = max(0, min(x2, width - 1));
-    y2 = max(0, min(y2, height - 1));
-
-    if (x >=x1 && x <= x2) {
-        if (y >= y1 && y <= y2) {
-            onBorder = true;
-    } 
-} 
-
-    if (y >=y1 && y <= y2) {
-        if ((x>= x1 && x < x1+thickness) || (x <= x2 && x > x2-thickness)) {
-            onBorder = true;
-        }
-    }
+    if (y >= top && y < top + thickness) onBorder = true;
+    if (y >= max(0, bottom - thickness) && y <= bottom) onBorder = true;
+    if (x >= left && x < left + thickness) onBorder = true;
+    if (x >= max(0, right - thickness) && x <= right) onBorder = true;
 
     if (onBorder) {
             int idx = (y * width + x) * channels;
@@ -72,7 +64,7 @@ __global__ void drawTextBackgroundKernel(unsigned char* image, int width, int he
 
 __host__ Color getColorForClass(int classId){
 
-    return CLASS_COLORS[classId % 80];
+    return CLASS_COLORS[classId % (sizeof(CLASS_COLORS) / sizeof(CLASS_COLORS[0]))];
 }
 
 __host__ void drawBoundingBoxes(Image* image, std::vector<Detection>& detections, const char** classNames) {

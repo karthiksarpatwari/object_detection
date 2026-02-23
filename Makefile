@@ -23,7 +23,7 @@ INCLUDES = -I./include \
 
 LDFLAGS = -L"$(CUDA_PATH)/lib64" \
 	-L"$(LIBTORCH_PATH)/lib" \
-	-Wl,-rpath,$(LIBTORCH_PATH)/lib
+	-Xlinker=-rpath -Xlinker=$(LIBTORCH_PATH)/lib
 
 LIBS = -lcudart -lcublas -lcutensor -lcudnn -ltorch -ltorch_cuda -lc10 -lc10_cuda
 
@@ -52,7 +52,7 @@ HEADERS = include/object_detector.h \
 	include/preprocessing_kernel.h \
 	include/cublas_ops.h \
 	include/bbox_drawer.h \
-	include/inference_engine.h 
+	include/inference_engine.h \
 	include/stb_image.h \
 	include/stb_image_write.h 
 

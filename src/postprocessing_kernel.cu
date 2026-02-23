@@ -7,7 +7,7 @@ __global__ void decodeAndFilterKernel(float* predictions, Detection* output, int
 
     if (x >= numPredictions) return;
     
-    float* pred = &predictions[idx*85]; 
+    float* pred = &predictions[x * 85]; 
 
     float objConf = pred[4];
 
@@ -42,14 +42,14 @@ __global__ void decodeAndFilterKernel(float* predictions, Detection* output, int
     if (outIdx < 10000) {
         output[outIdx].x = x_center;
         output[outIdx].y = y_center;
-        output[outIdx].width = width;
-        output[outIdx].height = height;
+        output[outIdx].w = width;
+        output[outIdx].h = height;
         output[outIdx].class_id= maxClassIdx;
         output[outIdx].confidence = conf;
     }
 }
 
-__host__ void decodeAndFilterPredictions(float* d_predictions, std::vector<Detection>& detections, float confThreshold, int imgWidth, int imgHeight, int numPredictions, int predctionSize) {
+__host__ void decodeAndFilterPredictions(float* d_predictions, std::vector<Detection>& detections, float confThreshold, int imgWidth, int imgHeight, int numPredictions, int predictionSize, int inputWidth, int inputHeight) {
 
     float scale = fminf((float)inputWidth/imgWidth, (float)inputHeight/imgHeight);
     int  newW = (int)(imgWidth * scale);
@@ -67,11 +67,12 @@ __host__ void decodeAndFilterPredictions(float* d_predictions, std::vector<Detec
     int blocksPerGrid = (numPredictions + threadsPerBlock - 1) / threadsPerBlock;
 
     decodeAndFilterKernel<<<blocksPerGrid, threadsPerBlock>>>(d_predictions, d_output, d_outputCount, numPredictions, confThreshold, imgWidth, imgHeight, scale, offsetX, offsetY);
-    checkCudaErrors(cudaGetLastError(),"Decode and Filter Kernel failed");
+    checkCudaError(cudaGetLastError(), "Decode and Filter Kernel failed");
 
     cudaDeviceSynchronize();
 
     int h_outputCount = 0;
+    cudaMemcpy(&h_outputCount, d_outputCount, sizeof(int), cudaMemcpyDeviceToHost);
     if (h_outputCount > 0) {
         Detection* h_detections = new Detection[h_outputCount];
         cudaMemcpy(h_detections, d_output, h_outputCount * sizeof(Detection), cudaMemcpyDeviceToHost);

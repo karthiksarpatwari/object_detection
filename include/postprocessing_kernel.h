@@ -13,6 +13,6 @@ struct Detection {
 
 __global__ void decodeAndFilterKernel(float* predictions, Detection* output, int* outputCount, int numPredictions, float confThreshold, int imgWidth, int imgHeight, float scale, int offsetX, int offsetY);
 
-__host__ void decodeAndFilterPredictions(float* d_predictions, std::vector<Detection>& detections, float confThreshold, int imgWidth, int imgHeight, int numPredictions, int predictionSize);
+__host__ void decodeAndFilterPredictions(float* d_predictions, std::vector<Detection>& detections, float confThreshold, int imgWidth, int imgHeight, int numPredictions, int predictionSize, int inputWidth, int inputHeight);
 
 #endif

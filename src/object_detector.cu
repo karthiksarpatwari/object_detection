@@ -134,5 +134,5 @@ void ObjectDetector::inference(float* d_input, float* d_output) {
 }
 
 void ObjectDetector::postprocess(float* d_output, std::vector<Detection>& detections, float confThresh, int imgWidth, int imgHeight) {
-    decodeAndFilterPredictions(d_output,detections,confThresh,imgWidth,imgHeight,engine->getNumPredictions(),engine->getPredictionSize());
+    decodeAndFilterPredictions(d_output, detections, confThresh, imgWidth, imgHeight, engine->getNumPredictions(), engine->getPredictionSize(), inputWidth, inputHeight);
 }

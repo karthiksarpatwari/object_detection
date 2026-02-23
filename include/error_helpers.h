@@ -20,7 +20,7 @@ inline void checkCudaError(cudaError_t err, const char* msg) {
 
 inline void checkCublasError(cublasStatus_t err, const char* msg) {
     if (err != CUBLAS_STATUS_SUCCESS) {
-        fprintf(stderr, "CUBLAS Error: %s: %s\n", msg, cublasGetStatusString(err));
+        fprintf(stderr, "CUBLAS Error: %s: %s\n", msg, msg);
         exit(EXIT_FAILURE);
     }
 }
@@ -29,7 +29,7 @@ inline void checkCublasError(cublasStatus_t err, const char* msg) {
 
 inline void checkCutensorError(cutensorStatus_t err, const char* msg) {
     if (err != CUTENSOR_STATUS_SUCCESS) {
-        fprintf(stderr, "CUTENSOR Error: %s: %s\n", msg, cutensorGetStatusString(err));
+        fprintf(stderr, "CUTENSOR Error: %s: %s\n", msg, msg);
         exit(EXIT_FAILURE);
     }
 }

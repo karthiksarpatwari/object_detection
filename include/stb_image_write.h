@@ -151,7 +151,7 @@ LICENSE
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
 #define INCLUDE_STB_IMAGE_WRITE_H
 
-#include 
+#include <stdlib.h>
 
 // if STB_IMAGE_WRITE_STATIC causes problems, try defining STBIWDEF to 'inline' or 'static inline'
 #ifndef STBIWDEF
@@ -208,13 +208,13 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
-#include 
+#include <stdio.h>
 #endif // STBI_WRITE_NO_STDIO
 
-#include 
-#include 
-#include 
-#include 
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
+#include <stddef.h>
 
 #if defined(STBIW_MALLOC) && defined(STBIW_FREE) && (defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
 // ok
@@ -241,7 +241,7 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
 
 #ifndef STBIW_ASSERT
-#include 
+#include <assert.h>
 #define STBIW_ASSERT(x) assert(x)
 #endif
 

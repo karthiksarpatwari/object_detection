@@ -3,7 +3,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "../include/stb_image_write.h"
 #include "../include/image_loader.h"
-#include "./include/error_helpers.h"
+#include "error_helpers.h"
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>

@@ -368,7 +368,7 @@ RECENT REVISION HISTORY:
 // very big.
 
 #ifndef STBI_NO_STDIO
-#include 
+#include <stdio.h>
 #endif // STBI_NO_STDIO
 
 #define STBI_VERSION 1
@@ -383,7 +383,7 @@ enum
  STBI_rgb_alpha = 4
 };
 
-#include 
+#include <stdlib.h>
 typedef unsigned char stbi_uc;
 typedef unsigned short stbi_us;
 
@@ -584,22 +584,22 @@ STBIDEF int stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const char
 #endif
 
 
-#include 
-#include // ptrdiff_t on osx
-#include 
-#include 
-#include 
+#include <stdlib.h>
+#include <stddef.h> // ptrdiff_t on osx
+#include <string.h>
+#include <stdarg.h>
+#include <stddef.h>
 
 #if !defined(STBI_NO_LINEAR) || !defined(STBI_NO_HDR)
-#include // ldexp, pow
+#include <math.h> // ldexp, pow
 #endif
 
 #ifndef STBI_NO_STDIO
-#include 
+#include <stdio.h>
 #endif
 
 #ifndef STBI_ASSERT
-#include 
+#include <assert.h>
 #define STBI_ASSERT(x) assert(x)
 #endif
 
@@ -644,7 +644,7 @@ typedef signed short stbi__int16;
 typedef unsigned int stbi__uint32;
 typedef signed int stbi__int32;
 #else
-#include 
+#include <stdint.h>
 typedef uint16_t stbi__uint16;
 typedef int16_t stbi__int16;
 typedef uint32_t stbi__uint32;
@@ -723,12 +723,12 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 
 #if !defined(STBI_NO_SIMD) && (defined(STBI__X86_TARGET) || defined(STBI__X64_TARGET))
 #define STBI_SSE2
-#include 
+#include <emmintrin.h>
 
 #ifdef _MSC_VER
 
 #if _MSC_VER >= 1400 // not VC6
-#include // __cpuid
+#include <intrin.h> // __cpuid
 static int stbi__cpuid3(void)
 {
  int info[4];
@@ -780,7 +780,7 @@ static int stbi__sse2_available(void)
 #endif
 
 #ifdef STBI_NEON
-#include 
+#include <arm_neon.h>
 #ifdef _MSC_VER
 #define STBI_SIMD_ALIGN(type, name) __declspec(align(16)) type name
 #else

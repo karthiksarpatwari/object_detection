@@ -7,6 +7,7 @@ Simple exercise but than be expanded into more comprehensive vision related item
 
 Explore interactions between Torch, CUBLAS, cuTensor and cuDNN vs. LLMs of today - for example, if I brute force feed images to an LLM and ask it to detect objects etc... what will be the throughput and what will be the performance/cost
 
+Exciting to see a framework forming that can be re-utilized for deeper investigations
 
 ------------
 

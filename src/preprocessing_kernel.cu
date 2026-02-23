@@ -77,10 +77,10 @@ __host__ void preprocessImage(Image* image, float* d_output, int targetW, int ta
    dim3 gridSize((targetW + 15)/16, (targetH + 15)/16);
 
    letterboxResizeKernel<<<gridSize, blockSize>>>(image->data, d_output, image->width, image->height, targetW, targetH, image->channels, params.padValue, scale, offsetX, offsetY);
-   checkCudaErrors(cudaGetLastError(),"Letterbox Kernel failed");
+   checkCudaError(cudaGetLastError(),"Letterbox Kernel failed");
 
    normalizeKernel<<<gridSize, blockSize>>>(d_output, targetW, targetH, image->channels, d_mean, d_std);
-   checkCudaErrors(cudaGetLastError(),"Normalize Kernel failed");
+   checkCudaError(cudaGetLastError(),"Normalize Kernel failed");
 
    cudaDeviceSynchronize();
 

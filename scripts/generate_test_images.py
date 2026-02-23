@@ -2,7 +2,7 @@
 
 import os
 import sys
-import urlliib, request
+import urllib, requests
 from PIL import Image
 import io 
 
@@ -47,5 +47,5 @@ if __name__ == "__main__":
             print("Please provide a valid number of images")
             sys.exit(1)
     print(f"Downloading {num} sample images")
-    
+
     dowload_sample_images()

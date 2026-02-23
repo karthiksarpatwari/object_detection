@@ -2,7 +2,7 @@
 
 import os
 import sys
-import urllib, requests
+import urllib.request
 from PIL import Image
 import io 
 
@@ -18,7 +18,7 @@ def dowload_sample_images(num_images=10):
 
     for i in range(num_images):
         url = f"https://picsum.photos/200/300?random={i}"
-        output_path = os.path.join("input", f"image_{i:0.3d}.jpg")
+        output_path = os.path.join("input", f"image_{i:03d}.jpg")
         try:
             with urllib.request.urlopen(url) as response:
                 img_data = response.read()
@@ -47,5 +47,5 @@ if __name__ == "__main__":
             print("Please provide a valid number of images")
             sys.exit(1)
     print(f"Downloading {num} sample images")
-
+    
     dowload_sample_images()

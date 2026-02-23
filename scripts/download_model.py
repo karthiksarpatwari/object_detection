@@ -19,22 +19,24 @@ def main():
 
         print("Model loaded successfully")
 
-        # Export to TorchScript and save as .pt (required for LibTorch C++ load)
-        dummy_input = torch.rand(1, 3, 640, 640)
-        with torch.no_grad():
-            traced = torch.jit.trace(model, dummy_input)
-        torch.jit.save(traced, model_save_path)
-        print(f"Model saved to {model_save_path} (TorchScript format for C++)")
+        # Save the .pt model directly (no TorchScript)
+        torch.save(model, model_save_path)
+        print(f"Model saved to {model_save_path}")
 
         size_mb = os.path.getsize(model_save_path) / (1024 * 1024)
         print(f"Model size: {size_mb:.2f} MB")
 
-        # Run inference with the downloaded model (traced accepts tensors)
+        # Run inference with the downloaded model
         print("\nRunning inference...")
-        dummy_input = torch.rand(1, 3, 640, 640)
-        with torch.no_grad():
-            results = traced(dummy_input)
-        print("Inference on dummy input: OK")
+        if os.path.exists("input") and os.listdir("input"):
+            sample_image = os.path.join("input", sorted(os.listdir("input"))[0])
+            results = model(sample_image)
+            print(f"Inference on {sample_image}: {len(results.xyxy[0])} detections")
+        else:
+            dummy_input = torch.rand(1, 3, 640, 640)
+            with torch.no_grad():
+                results = model(dummy_input)
+            print("Inference on dummy input: OK")
 
         print("Model download and inference completed successfully")
     except Exception as e:

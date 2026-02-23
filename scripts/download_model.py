@@ -19,27 +19,8 @@ def main():
 
         print("Model loaded successfully")
 
-        # Export to TorchScript format (required for LibTorch C++ torch::jit::load)
-        # torch.save() produces Python pickle format - use torch.jit.trace for LibTorch
-        model.eval()
-        # Use model.model (DetectionModel) - returns raw [1, 25200, 85] tensor or tuple
-        raw_model = model.model
-        dummy_input = torch.rand(1, 3, 640, 640)
-
-        class TraceWrapper(torch.nn.Module):
-            def __init__(self, model):
-                super().__init__()
-                self.model = model
-
-            def forward(self, x):
-                out = self.model(x)
-                return out[0] if isinstance(out, (tuple, list)) else out
-
-        wrapper = TraceWrapper(raw_model)
-        with torch.no_grad():
-            traced_model = torch.jit.trace(wrapper, dummy_input)
-        traced_model.save(model_save_path)
-        print(f"TorchScript model saved to {model_save_path}")
+        torch.save(model, model_save_path)
+        print(f"Model saved to {model_save_path}")
 
         size_mb = os.path.getsize(model_save_path) / (1024 * 1024)
         print(f"Model size: {size_mb:.2f} MB")

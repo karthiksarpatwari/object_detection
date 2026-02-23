@@ -16,6 +16,8 @@ __device__ float calculateIoU(Detection* a, Detection* b) {
 
     float inter_x1 = fmaxf(a_x1, b_x1);
     float inter_y1 = fmaxf(a_y1, b_y1);
+    float inter_x2 = fminf(a_x2, b_x2);
+    float inter_y2 = fminf(a_y2, b_y2);
 
     float inter_w = fmaxf(0.0f, inter_x2 - inter_x1);
     float inter_h = fmaxf(0.0f, inter_y2 - inter_y1);
@@ -23,6 +25,7 @@ __device__ float calculateIoU(Detection* a, Detection* b) {
     float inter_area = inter_w * inter_h;
     float a_area = a->w * a->h;
     float b_area = b->w * b->h;
+    float union_area = a_area + b_area - inter_area;
 
     if (union_area < 1e-6f) return 0.0f;
 
@@ -54,11 +57,13 @@ __host__ void nonMaximumSuppression(std::vector<Detection>& input, std::vector<D
 
     Detection* d_detections;
     bool* d_keep;
+    bool* h_keep = new bool[input.size()];
 
     cudaMalloc(&d_detections, input.size() * sizeof(Detection));
     cudaMalloc(&d_keep, input.size() * sizeof(bool));
     cudaMemcpy(d_detections, input.data(), input.size() * sizeof(Detection), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_keep, keep.data(), input.size() * sizeof(bool), cudaMemcpyHostToDevice);
+    for (size_t i = 0; i < input.size(); i++) h_keep[i] = true;
+    cudaMemcpy(d_keep, h_keep, input.size() * sizeof(bool), cudaMemcpyHostToDevice);
 
     int blockSize = 256;
     int numBlocks = (input.size() + blockSize - 1) / blockSize;
@@ -74,7 +79,7 @@ __host__ void nonMaximumSuppression(std::vector<Detection>& input, std::vector<D
         }
     }
 
-    delete[] h_keep;
     cudaFree(d_detections);
     cudaFree(d_keep);
+    delete[] h_keep;
 }

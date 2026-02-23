@@ -56,8 +56,8 @@ $(TARGET): $(SOURCES) $(HEADERS)
 
 check-deps:
 	@echo "Checking dependencies..."
-	@if not exist "models\yolov5n.torchscript" (\
-		echo "Error: YOLOv5n.torchscript not found in models directory"; \
+	@if not exist "models\yolov5n.pt" (\
+		echo "Error: yolov5n.pt not found in models directory"; \
 		echo "Please download the model using scripts/download_model.py"; \
 		exit 1; \
 	fi
@@ -67,7 +67,7 @@ check-deps:
 		exit 1; \
 	fi
 download-model:
-	@echo "Downloading YOLOv5n.torchscript..."
+	@echo "Downloading yolov5n.pt..."
 	@python scripts/download_model.py
 	@echo "Done!"
 

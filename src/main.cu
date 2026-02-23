@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
     }
 
     printf("Loading model and initializing YOLOv8 detector...\n");
-    ObjectDetector detector("models/yolov5n.torchscript","models/coco.names");
+    ObjectDetector detector("models/yolov5n.pt", "data/coco.names");
 
     printf("Loading images from: %s\n". inputDir.c_str());
 

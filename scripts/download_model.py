@@ -9,35 +9,42 @@ def main():
     print("YOLOv5 Model Downloader")
     print("="*50)
 
-    model_name = "yolov5s.pt"
-    model_url = "https://github.com/ultralytics/yolov5/releases/download/v7.0/yolov5s.pt"
-    model_path = os.path.join(os.path.dirname(__file__), model_name)
+    os.makedirs("models", exist_ok=True)
+    model_save_path = os.path.join("models", "yolov5n.pt")
 
     try:
-        print(f"Downloading {model_name} from {model_url}...")
-        model = torch.hub.load('ultralytics/yolov5', 'yolov5n',pretrained=True)
+        print("Downloading YOLOv5n from ultralytics/yolov5...")
+        model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
         model.eval()
 
         print("Model loaded successfully")
-        dummy_input = torch.randn(1, 3, 640, 640)
-        with torch.no_grad():
-                traced_script = torch.jit.trace(model,dummy_input)
-        
-        traced_script.save('models/yolov5n.torchscript')
-        print("TorchScript model saved to models/yolov5n.torchscript")
 
-        size_mb = os.path.getsize(model_path) / (1024 * 1024)
+        # Export to TorchScript and save as .pt (required for LibTorch C++ load)
+        dummy_input = torch.rand(1, 3, 640, 640)
+        with torch.no_grad():
+            traced = torch.jit.trace(model, dummy_input)
+        torch.jit.save(traced, model_save_path)
+        print(f"Model saved to {model_save_path} (TorchScript format for C++)")
+
+        size_mb = os.path.getsize(model_save_path) / (1024 * 1024)
         print(f"Model size: {size_mb:.2f} MB")
 
-        print("Model download completed successfully")
+        # Run inference with the downloaded model (traced accepts tensors)
+        print("\nRunning inference...")
+        dummy_input = torch.rand(1, 3, 640, 640)
+        with torch.no_grad():
+            results = traced(dummy_input)
+        print("Inference on dummy input: OK")
+
+        print("Model download and inference completed successfully")
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)
 
-    print("Downloading COCO class names")
+    print("\nSaving COCO class names...")
 
     try:
-        import urllib.request
+        os.makedirs("data", exist_ok=True)
         coco_classes = [
             "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train",
             "truck", "boat", "traffic light", "fire hydrant", "stop sign",
@@ -61,6 +68,7 @@ def main():
         print(f"Error: {e}")
         sys.exit(1)
 
-    print("Downloading YOLOv5n.torchscript")
+    return 0
+
 if __name__ == "__main__":
     main()

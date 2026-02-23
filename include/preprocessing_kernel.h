@@ -8,7 +8,7 @@
 #include "error_helpers.h"
 #include "image_loader.h"
 
-struct PreprocessingParams {
+struct PreprocessParams {
     float mean[3];
     float std[3];
     float padValue;

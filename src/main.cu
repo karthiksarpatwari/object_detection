@@ -54,6 +54,9 @@ int main(int argc, char* argv[]) {
     printf("|----------------------------------------|\n");
     printf("| Object Detection using YOLOv8 CUDA Library |\n");
     printf("|----------------------------------------|\n");
+    auto [inputDir, outputDir, confThresh, iouThresh] = parseCommandLineArguments(argc, argv);
+    printf("|----------------------------------------|\n");
+    printf("Configuration:\n");
     printf("| Input Directory: %s\n", inputDir.c_str());
     printf("| Output Directory: %s\n", outputDir.c_str());
     printf("| Confidence Threshold: %f\n", confThresh);

@@ -12,6 +12,8 @@
 #include "bbox_drawer.h"
 #include "postprocessing_kernel.h"
 #include "preprocessing_kernel.h"
+#include "cublas_ops.h"
+#include "cutensor_ops.h"
 
 // Object detctor class - responsible for loading the model, preprocessing the image, running the inference, and postprocessing the results
 

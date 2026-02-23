@@ -1,25 +1,66 @@
+# Object Detection Capstone — Notes & Reflections
 
-This is a good exercise in getting into the details of object identification. I am going to use this exercise to start getting into more of the GPU hardware. For example, if we run this on Jetson NANO vs. Thor - how will the performance look like?
+## Motivation
 
-Can I run this in a cloud environment that has access to more powerful GPUs like the Blackwell?
+This project is an exercise in getting into the details of object detection and GPU hardware. I want to explore:
 
-Simple exercise but than be expanded into more comprehensive vision related items
+- **Hardware**: Performance on Jetson Nano vs. Thor vs. cloud GPUs (e.g., Blackwell)
+- **Deployment**: Running in Colab and cloud environments with powerful GPUs
+- **Integration**: How Torch, cuBLAS, cuTENSOR, and cuDNN interplay; how this compares to feeding images to LLMs for detection
 
-Explore interactions between Torch, CUBLAS, cuTensor and cuDNN vs. LLMs of today - for example, if I brute force feed images to an LLM and ask it to detect objects etc... what will be the throughput and what will be the performance/cost
+The framework forming here can be reused for deeper investigations—video detection, pose estimation (e.g., Google MoveNet), and more.
 
-Exciting to see a framework forming that can be re-utilized for deeper investigations
+---
 
-------------
+## Torch / LibTorch Observations
 
-## Torch related
+### Warm-up Run
 
-a. Why is a warm-up run needed?
-b. Forward pass inference and model configuration details - need to be understood better
+A warm-up forward pass is performed during `InferenceEngine` construction. This:
 
+- JIT-compiles the TorchScript graph on first use
+- Allocates device memory and caches kernels
+- Avoids a large first-frame latency spike during real inference
 
----------
+Without warm-up, the first image would show much higher inference time.
 
-## Ideas for more research
+### Forward Pass and Model Configuration
 
-a. How can we move this to a video for object detection?
-b. Compare this to skeleton pose detection algorithms like the google movenet? which can be ran on a CPU
+- **Input**: `[1, 3, 640, 640]`, NCHW, float32, ImageNet-normalized
+- **Output**: Raw `[1, 25200, 85]` — 85 = (x, y, w, h, obj_conf) + 80 class logits
+- Postprocessing (decode, filter, NMS) is done in C++; the model only does the backbone + detection head
+
+### .pt vs. TorchScript
+
+The battle between `.pt` (pickle) and TorchScript took up a lot of debug time:
+
+- **torch.save()** produces Python pickle; C++ `torch::jit::load()` cannot load it
+- **torch.jit.trace()** produces TorchScript; this is what LibTorch expects
+- Models must be **traced on CPU** if LibTorch is CPU-only, to avoid embedded CUDA device refs
+
+---
+
+## Bug-Driven Observations
+
+During development, several bugs revealed important behavior:
+
+### LibTorch CUDA vs. CPU Builds
+
+`aten::empty_strided` not available for CUDA backend usually means **LibTorch is CPU-only**. The fix: add a CPU fallback—if `model.to(CUDA)` throws, keep the model on CPU and copy tensors between GPU and host during inference. Preprocessing and postprocessing remain on GPU.
+
+### Host vs. Device Pointers in CUDA Kernels
+
+Passing `image->data` (host) into a CUDA kernel that expects device memory causes **illegal memory access**. The image lives in `image->d_data` after `copyImageToDevice()`. Always use `d_data` for kernel input when the data has been copied to the device.
+
+### TorchScript Trace Sanity Checks
+
+YOLOv5’s graph can differ slightly between runs (e.g., batchnorm, internal conditionals). `torch.jit.trace(..., check_trace=True)` then fails with “Graphs differed across invocations.” Using `check_trace=False` allows export; the traced model still runs correctly for inference.
+
+---
+
+## Ideas for Further Research
+
+1. **Video**: Extend to real-time video streams (e.g., webcam, RTSP).
+2. **Pose**: Compare with skeleton/pose models (e.g., Google MoveNet) that run on CPU.
+3. **LLM vs. CNN**: Feed images to an LLM for detection vs. this pipeline — throughput, latency, cost.
+4. **Benchmarking**: Systematic runs on Jetson Nano, T4, A100, Blackwell to compare FPS and power.
